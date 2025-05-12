@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClimaBR | Previsão do Tempo Inteligente</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios@1.1.2/dist/axios.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --secondary: #1e40af;
+            --accent: #3b82f6;
+            --text: #1f2937;
+            --light: #f9fafb;
+            --gray: #e5e7eb;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            margin: 0;
+            padding: 2rem;
+            background: linear-gradient(135deg, #e0f2fe 0%, #bfdbfe 100%);
+            color: var(--text);
+        }
+        
+        .app-container {
+            width: 100%;
+            max-width: 1200px;
+            background: rgba(232, 226, 226, 0.95);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .app-header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 1.5rem 2rem;
+            text-align: center;
+            position: relative;
+        }
+        
+        .app-title {
+            margin: 0;
+            font-size: 1.8rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        
+        .app-content {
+            padding: 2rem;
+        }
+        
+        .search-form {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .search-box {
+            position: relative;
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            font-size: 1rem;
+            border: 2px solid var(--gray);
+            border-radius: 8px;
+            transition: all 0.3s;
+            background: white;
+        }
+        
+        .search-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+        
+        .search-input::placeholder {
+            color: #9ca3af;
+        }
+        
+        .search-btn {
+            background: linear-gradient(to right, var(--primary), var(--accent));
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 0 1.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        
+        .search-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+        
+        .search-btn:disabled {
+            background: #d1d5db;
+            transform: none;
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+        
+        .dropdown {
+            position: absolute;
+            width: 100%;
+            max-height: 300px;
+            overflow-y: auto;
+            background: white;
+            border: 1px solid var(--gray);
+            border-radius: 0 0 8px 8px;
+            z-index: 100;
+            display: none;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-top: -3px;
+        }
+        
+        .dropdown.show {
+            display: block;
+        }
+        
+        .dropdown-item {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .dropdown-item:hover {
+            background: #f3f4f6;
+        }
+        
+        .clear-btn {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #9ca3af;
+            font-size: 1.2rem;
+        }
+        
+        .weather-card {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s ease;
+        }
+        
+        .weather-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .weather-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start; /* Alterado de "center" para melhor alinhamento */
+            align-items: center;
+            margin-bottom: 1.5rem;
+            gap: 1rem; /* Espaço entre os elementos */
+        }
+        
+        .weather-location {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin: 0;
+        }
+        
+        .weather-main {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .weather-icon {
+            width: 100px;
+            height: 100px;
+            animation: float 3s ease-in-out infinite;
+        }
+        
+        .weather-temp {
+            font-size: 3rem;
+            font-weight: 700;
+            margin: 0;
+        }
+        
+        .weather-desc {
+            font-size: 1.2rem;
+            color: #4b5563;
+            margin: 0.5rem 0 0;
+            text-transform: capitalize;
+        }
+        
+        .weather-details {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        
+        .detail-card {
+            background: #f9fafb;
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .detail-card i {
+            font-size: 2rem;
+            color: var(--primary);
+            margin-bottom: 0.25rem;
+        }
+        
+        .detail-label {
+            font-size: 1.2rem;
+            color: #6b7280;
+            margin-bottom: 0.5rem;
+        }
+        
+        .detail-value {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin: 0;
+        }
+        
+        .error-message {
+            color: var(--danger);
+            background: #fee2e2;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 2rem;
+            color: #4b5563;
+        }
+        
+        .spinner {
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+        
+        @media (max-width: 768px) {
+            .search-form {
+                grid-template-columns: 1fr;
+            }
+            
+            .app-content {
+                padding: 1.5rem;
+            }
+            
+            .weather-main {
+                flex-direction: column;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        function App() {
+            const [states, setStates] = React.useState([]);
+            const [filteredStates, setFilteredStates] = React.useState([]);
+            const [cities, setCities] = React.useState([]);
+            const [filteredCities, setFilteredCities] = React.useState([]);
+            const [selectedState, setSelectedState] = React.useState('');
+            const [selectedCity, setSelectedCity] = React.useState('');
+            const [showStateDropdown, setShowStateDropdown] = React.useState(false);
+            const [showCityDropdown, setShowCityDropdown] = React.useState(false);
+            const [weather, setWeather] = React.useState(null);
+            const [loading, setLoading] = React.useState(false);
+            const [loadingStates, setLoadingStates] = React.useState(false);
+            const [loadingCities, setLoadingCities] = React.useState(false);
+            const [error, setError] = React.useState('');
+
+            const API_KEY = "SUA_CHAVE_AQUI"; // Substitua pela sua chave da OpenWeatherMap
+
+            // Carrega todos os estados do Brasil via API do IBGE
+            React.useEffect(() => {
+                const fetchStates = async () => {
+                    setLoadingStates(true);
+                    try {
+                        const response = await axios.get(
+                            'https://servicodados.ibge.gov.br/api/v1/localidades/estados?orderBy=nome'
+                        );
+                        const sortedStates = response.data.map(estado => estado.nome).sort();
+                        setStates(sortedStates);
+                        setFilteredStates(sortedStates);
+                    } catch (err) {
+                        setError('Erro ao carregar estados');
+                        console.error(err);
+                    } finally {
+                        setLoadingStates(false);
+                    }
+                };
+                
+                fetchStates();
+            }, []);
+
+            // Carrega cidades quando um estado é selecionado
+            React.useEffect(() => {
+                if (selectedState) {
+                    const fetchCities = async () => {
+                        setLoadingCities(true);
+                        try {
+                            const stateResponse = await axios.get(
+                                'https://servicodados.ibge.gov.br/api/v1/localidades/estados'
+                            );
+                            const estado = stateResponse.data.find(e => e.nome === selectedState);
+                            
+                            if (estado) {
+                                const citiesResponse = await axios.get(
+                                    `https://servicodados.ibge.gov.br/api/v1/localidades/estados/${estado.id}/municipios`
+                                );
+                                const cityNames = citiesResponse.data.map(cidade => cidade.nome).sort();
+                                setCities(cityNames);
+                                setFilteredCities(cityNames);
+                            }
+                        } catch (err) {
+                            setError('Erro ao carregar cidades');
+                            console.error(err);
+                        } finally {
+                            setLoadingCities(false);
+                        }
+                    };
+                    
+                    fetchCities();
+                }
+            }, [selectedState]);
+
+            // Filtra estados conforme digitação
+            const filterStates = (input) => {
+                const filtered = states.filter(state => 
+                    state.toLowerCase().includes(input.toLowerCase())
+                );
+                setFilteredStates(filtered);
+                setShowStateDropdown(true);
+            };
+
+            // Filtra cidades conforme digitação
+            const filterCities = (input) => {
+                const filtered = cities.filter(city => 
+                    city.toLowerCase().includes(input.toLowerCase())
+                );
+                setFilteredCities(filtered);
+                setShowCityDropdown(true);
+            };
+
+            // Quando seleciona um estado
+            const handleStateSelect = (state) => {
+                setSelectedState(state);
+                setShowStateDropdown(false);
+                setSelectedCity('');
+                setWeather(null);
+            };
+
+            // Limpa seleção de estado
+            const clearState = () => {
+                setSelectedState('');
+                setCities([]);
+                setSelectedCity('');
+                setWeather(null);
+            };
+
+            // Quando seleciona uma cidade
+            const handleCitySelect = (city) => {
+                setSelectedCity(city);
+                setShowCityDropdown(false);
+                setWeather(null);
+            };
+
+            // Limpa seleção de cidade
+            const clearCity = () => {
+                setSelectedCity('');
+                setWeather(null);
+            };
+
+            // Fecha dropdowns ao clicar fora
+            React.useEffect(() => {
+                const handleClickOutside = () => {
+                    setShowStateDropdown(false);
+                    setShowCityDropdown(false);
+                };
+                document.addEventListener('click', handleClickOutside);
+                return () => document.removeEventListener('click', handleClickOutside);
+            }, []);
+
+            // Busca o clima
+            const searchWeather = async () => {
+                if (!selectedCity) {
+                    setError('Por favor, selecione uma cidade');
+                    return;
+                }
+
+                setLoading(true);
+                setError('');
+
+                try {
+                    const geoUrl = `https://api.openweathermap.org/geo/1.0/direct?q=${selectedCity},${selectedState},BR&limit=1&appid=${API_KEY}`;
+                    const geoResponse = await axios.get(geoUrl);
+
+                    if (!geoResponse.data?.length) {
+                        setError('Localização não encontrada');
+                        return;
+                    }
+
+                    const location = geoResponse.data[0];
+                    const weatherUrl = `https://api.openweathermap.org/data/2.5/weather?units=metric&lat=${location.lat}&lon=${location.lon}&appid=${API_KEY}&lang=pt_br`;
+                    const weatherResponse = await axios.get(weatherUrl);
+                    setWeather(weatherResponse.data);
+
+                } catch (err) {
+                    setError('Erro ao buscar dados climáticos. Tente novamente.');
+                    console.error(err);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            // Obtém ícone do clima
+            const getWeatherIcon = (iconCode) => {
+                return `https://openweathermap.org/img/wn/${iconCode}@2x.png`;
+            };
+
+            return (
+                <div className="app-container">
+                    <div className="app-header">
+                        <h1 className="app-title">
+                            <i className="fas fa-cloud-sun"></i> ClimaBR
+                        </h1>
+                    </div>
+                    
+                    <div className="app-content">
+                        <div className="search-form">
+                            <div className="search-box">
+                                <input
+                                    type="text"
+                                    className="search-input"
+                                    placeholder="Selecione um estado"
+                                    value={selectedState}
+                                    onChange={(e) => {
+                                        setSelectedState(e.target.value);
+                                        filterStates(e.target.value);
+                                    }}
+                                    onFocus={() => {
+                                        setFilteredStates(states);
+                                        setShowStateDropdown(true);
+                                    }}
+                                    onClick={(e) => e.stopPropagation()}
+                                />
+                                {selectedState && (
+                                    <button className="clear-btn" onClick={clearState}>×</button>
+                                )}
+                                <div className={`dropdown ${showStateDropdown ? 'show' : ''}`}>
+                                    {loadingStates ? (
+                                        <div className="dropdown-item loading">
+                                            <i className="fas fa-spinner spinner"></i> Carregando estados...
+                                        </div>
+                                    ) : filteredStates.length > 0 ? (
+                                        filteredStates.map((state, index) => (
+                                            <div 
+                                                key={index}
+                                                className="dropdown-item"
+                                                onClick={() => handleStateSelect(state)}
+                                            >
+                                                {state}
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="dropdown-item">Nenhum estado encontrado</div>
+                                    )}
+                                </div>
+                            </div>
+                            
+                            <div className="search-box">
+                                <input
+                                    type="text"
+                                    className="search-input"
+                                    placeholder={selectedState ? "Selecione uma cidade" : "Selecione um estado primeiro"}
+                                    value={selectedCity}
+                                    onChange={(e) => {
+                                        setSelectedCity(e.target.value);
+                                        filterCities(e.target.value);
+                                    }}
+                                    disabled={!selectedState}
+                                    onFocus={() => {
+                                        if (selectedState) {
+                                            setFilteredCities(cities);
+                                            setShowCityDropdown(true);
+                                        }
+                                    }}
+                                    onClick={(e) => e.stopPropagation()}
+                                />
+                                {selectedCity && (
+                                    <button className="clear-btn" onClick={clearCity}>×</button>
+                                )}
+                                <div className={`dropdown ${showCityDropdown ? 'show' : ''}`}>
+                                    {loadingCities ? (
+                                        <div className="dropdown-item loading">
+                                            <i className="fas fa-spinner spinner"></i> Carregando cidades...
+                                        </div>
+                                    ) : filteredCities.length > 0 ? (
+                                        filteredCities.map((city, index) => (
+                                            <div 
+                                                key={index}
+                                                className="dropdown-item"
+                                                onClick={() => handleCitySelect(city)}
+                                            >
+                                                {city}
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="dropdown-item">Nenhuma cidade encontrada</div>
+                                    )}
+                                </div>
+                            </div>
+                            
+                            <button 
+                                className="search-btn" 
+                                onClick={searchWeather} 
+                                disabled={loading || !selectedCity}
+                            >
+                                {loading ? (
+                                    <>
+                                        <i className="fas fa-spinner spinner"></i> Buscando...
+                                    </>
+                                ) : (
+                                    <>
+                                        <i className="fas fa-search"></i> Buscar
+                                    </>
+                                )}
+                            </button>
+                        </div>
+
+                        {error && (
+                            <div className="error-message">
+                                <i className="fas fa-exclamation-circle"></i> {error}
+                            </div>
+                        )}
+
+                        {weather ? (
+                            <div className="weather-card">
+                                <div className="weather-header">
+                                    <h2 className="weather-location">
+                                        {weather.name}, {selectedState}
+                                    </h2>
+                                    <div className="weather-date">
+                                        {new Date().toLocaleDateString('pt-BR', { 
+                                            weekday: 'long', 
+                                            day: 'numeric', 
+                                            month: 'long' 
+                                        })}
+                                    </div>
+                                </div>
+                                
+                                <div className="weather-main">
+                                    <img 
+                                        src={getWeatherIcon(weather.weather[0].icon)} 
+                                        alt={weather.weather[0].description} 
+                                        className="weather-icon"
+                                    />
+                                    <div>
+                                        <p className="weather-temp">{Math.round(weather.main.temp)}°C</p>
+                                        <p className="weather-desc">{weather.weather[0].description}</p>
+                                    </div>
+                                </div>
+                                
+                        <div className="weather-details">
+                            <div className="detail-card">
+                                <i className="fas fa-thermometer-three-quarters"></i>
+                                <p className="detail-label">Sensação</p>
+                                <p className="detail-value">{Math.round(weather.main.feels_like)}°C</p>
+                            </div>
+                            <div className="detail-card">
+                                <i className="fas fa-tint"></i>
+                                <p className="detail-label">Umidade</p>
+                                <p className="detail-value">{weather.main.humidity}%</p>
+                            </div>
+                            <div className="detail-card">
+                                <i className="fas fa-wind"></i>
+                                <p className="detail-label">Vento</p>
+                                <p className="detail-value">{Math.round(weather.wind.speed * 3.6)} km/h</p>
+                            </div>
+                            <div className="detail-card">
+                                <i className="fas fa-tachometer-alt"></i>
+                                <p className="detail-label">Pressão</p>
+                                <p className="detail-value">{weather.main.pressure} hPa</p>
+                            </div>
+                        </div>
+                    </div>
+                ) : loading ? (
+                    <div className="loading">
+                        <i className="fas fa-spinner spinner"></i> Carregando dados climáticos...
+                            </div>
+                        ) : null}
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
